@@ -1,12 +1,19 @@
+import FoodList  from './FoodList';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, SafeAreaView } from 'react-native';
+
+const foodItems = [
+  { category: "Fruits", items: ["Apple", "Banana", "Orange"] },
+  { category: "Vegetables", items: ["Carrot", "Broccoli", "Spinach"] },
+  // Add more categories and items
+];
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
+    <SafeAreaView style={styles.container}>
+      <FoodList foodItems={foodItems}/>
       <StatusBar style="auto" />
-    </View>
+    </SafeAreaView>
   );
 }
 
