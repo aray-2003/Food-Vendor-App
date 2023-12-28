@@ -1,5 +1,4 @@
 import FoodList from './FoodList'
-import { StatusBar } from 'expo-status-bar'
 import { StyleSheet, Text, SafeAreaView } from 'react-native'
 
 const foodItems = [
@@ -12,7 +11,6 @@ export default function App() {
   return (
     <SafeAreaView style={styles.container}>
       <FoodList foodItems={foodItems} />
-      <StatusBar style="auto" />
     </SafeAreaView>
   )
 }
@@ -20,8 +18,8 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     paddingTop: 30,
+    paddingHorizontal: 20,
     flex: 1,
     backgroundColor: '#fff',
-    alignItems: 'center'
   }
 })

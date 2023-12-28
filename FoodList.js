@@ -1,13 +1,24 @@
-import React from 'react'
+import React, {useState} from 'react';
 import {
   View,
   Text,
-  Pressable,
   FlatList,
+  Modal,
   StyleSheet,
-  TouchableOpacity
-} from 'react-native'
+  TouchableOpacity,
+} from 'react-native';
 
+function getColor() {
+  return (
+    'hsl(' +
+    (180 + 120 * Math.random()) +
+    ',' +
+    (70 + 20 * Math.random()) +
+    '%,' +
+    (40 + 10 * Math.random()) +
+    '%)'
+  );
+}
 // const foodItems = [
 //     { category: "Fruits", items: ["Apple", "Banana", "Orange"] },
 //     { category: "Vegetables", items: ["Carrot", "Broccoli", "Spinach"] },
@@ -15,40 +26,47 @@ import {
 // ];
 
 const FoodList = ({ foodItems }) => {
+  const coloredCategories = foodItems.map((category) => ({
+    ...category,
+    color: getColor(),
+  }));
+
+  
+
   const renderItem = ({ item }) => (
     <View>
-      <Text style={styles.category}>{item.category}</Text>
+      <Text style={[styles.category, {color: item.color}]}>{item.category}</Text>
+
       {item.items.map((food) => (
         <TouchableOpacity
-          style={styles.itemContainer}
+          style={[styles.itemContainer, { backgroundColor: item.color }]}
           key={food}
           onPress={() => {
-            console.log(`Pressed ${food}`)
-          }}
-        >
+            console.log(`Pressed ${food}`);
+          }}>
           <Text style={styles.item}>{food}</Text>
         </TouchableOpacity>
       ))}
     </View>
-  )
+  );
 
   return (
     <FlatList
-      data={foodItems}
+      data={coloredCategories}
       renderItem={renderItem}
       keyExtractor={(item) => item.category}
     />
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   category: {
     fontSize: 20,
     padding: 10,
-    fontWeight: 'bold'
+    fontWeight: 'bold',
   },
+
   itemContainer: {
-    backgroundColor: '#3285f3', // Blue background for items
     borderRadius: 5, // Rounded corners for items
     padding: 10,
     marginVertical: 5,
@@ -58,15 +76,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 3,
-
     //shadow for android
-    elevation: Platform.OS === 'android' ? 3 : 0
+    elevation: 3,
   },
   item: {
-    color: '#FFFFFF', // White text color for better contrast
+    color: '#fff', // White text color for better contrast
     fontSize: 16,
-    fontWeight: 'bold'
-  }
-})
+    // fontWeight: 'bold'
+  },
+});
 
-export default FoodList
+export default FoodList;
