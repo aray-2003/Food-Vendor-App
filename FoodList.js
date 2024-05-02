@@ -14,17 +14,17 @@ import {
 function getColor() {
   return (
     'hsl(' +
-    (180 + 120 * Math.random()) +
+    (360 * Math.random()) +
     ',' +
-    (70 + 20 * Math.random()) +
+    (80 + 20 * Math.random()) +
     '%,' +
-    (40 + 10 * Math.random()) +
+    (30 + 10 * Math.random()) +
     '%)'
   )
 }
 // const foodItems = [
-//     { category: "Fruits", items: ["Apple", "Banana", "Orange"] },
-//     { category: "Vegetables", items: ["Carrot", "Broccoli", "Spinach"] },
+//     { category: "Fruits", items: ["Apple", "Banana", "Orange"], color: #FFECA1 },
+//     { category: "Vegetables", items: ["Carrot", "Broccoli", "Spinach"], color: #7DDA58 },
 //     // Add more categories and items
 // ];
 
