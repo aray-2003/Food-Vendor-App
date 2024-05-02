@@ -23,8 +23,8 @@ function getColor() {
   )
 }
 // const foodItems = [
-//     { category: "Fruits", items: ["Apple", "Banana", "Orange"], color: #FFECA1 },
-//     { category: "Vegetables", items: ["Carrot", "Broccoli", "Spinach"], color: #7DDA58 },
+//     { category: "Fruits", items: ["Apple", "Banana", "Orange"]},
+//     { category: "Vegetables", items: ["Carrot", "Broccoli", "Spinach"]},
 //     // Add more categories and items
 // ];
 
@@ -51,24 +51,51 @@ const FoodList = ({ foodItems }) => {
         <Text style={[styles.category, { color: item.color }]}>
           {item.category}
         </Text>
-
-        {item.items.map((food) => (
-          <TouchableOpacity
-            style={[styles.itemContainer, { backgroundColor: item.color }]}
-            key={food}
-            onPress={() => {
-              setColor(item.color)
-              setSelectedItem(food)
-              setModalVisible(true)
-              //delay
-              setTimeout(() => {
-                inputRef.current.focus()
-              }, 250)
-            }}
-          >
-            <Text style={styles.item}>{food}</Text>
-          </TouchableOpacity>
-        ))}
+  
+        {item.items.map((food) => {
+          if (typeof food === 'object') {
+            const [brand, subcategories] = Object.entries(food)[0]
+  
+            return (
+              <View>
+                <Text style={[styles.brand, { color: item.color }]}>{brand}</Text>
+                {subcategories.map((subcategory) => (
+                  <TouchableOpacity
+                    style={[styles.subItemContainer, { backgroundColor: item.color }]}
+                    key={`${brand} ${subcategory}`}
+                    onPress={() => {
+                      setColor(item.color)
+                      setSelectedItem(`${brand} ${subcategory}`)
+                      setModalVisible(true)
+                      setTimeout(() => {
+                        inputRef.current.focus()
+                      }, 250)
+                    }}
+                  >
+                    <Text style={styles.item}>{subcategory}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )
+          } else {
+            return (
+              <TouchableOpacity
+                style={[styles.itemContainer, { backgroundColor: item.color }]}
+                key={food}
+                onPress={() => {
+                  setColor(item.color)
+                  setSelectedItem(food)
+                  setModalVisible(true)
+                  setTimeout(() => {
+                    inputRef.current.focus()
+                  }, 250)
+                }}
+              >
+                <Text style={styles.item}>{food}</Text>
+              </TouchableOpacity>
+            )
+          }
+        })}
       </View>
     )
 
@@ -174,7 +201,9 @@ const styles = StyleSheet.create({
   category: {
     fontSize: 20,
     padding: 10,
-    fontWeight: 'bold'
+    fontWeight: 'bold',
+    paddingBottom: 2,
+    borderBottomWidth: 3,
   },
 
   itemContainer: {
@@ -263,7 +292,30 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around'
-  }
+  },
+  brand: {
+    fontSize: 18,
+    padding: 10,
+    paddingBottom: 3,
+    fontWeight: 'bold',
+    marginLeft: 10,
+    textDecorationLine: 'underline',
+    
+  },
+  subItemContainer: {
+    borderRadius: 5,
+    padding: 5,
+    marginVertical: 3.5,
+    transparency: 0.5,
+    marginLeft: 20,
+    // shadow for ios
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    //shadow for android
+    elevation: 3
+  },
 })
 
 export default FoodList
