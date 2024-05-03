@@ -35,9 +35,4 @@ The **Food Vendor Resources App** is designed to assist food vendors in managing
 ## Contributing
 
 Contributions are welcome! If you have ideas for improving the app or want to report issues, please submit a pull request or open an issue.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 ---
