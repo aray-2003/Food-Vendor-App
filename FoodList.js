@@ -11,17 +11,21 @@ import {
   TouchableOpacity
 } from 'react-native'
 
+var colors = ['#C40C0C', '#FF6500', '#FF8A08', '#FFC100', '#F6E9B2', '#0A6847', '#7ABA78', '#756AB6', '#FF5BAE', '#6C3428', '#00224D'];
+
 function getColor() {
-  return (
-    'hsl(' +
-    (360 * Math.random()) +
-    ',' +
-    (80 + 20 * Math.random()) +
-    '%,' +
-    (30 + 10 * Math.random()) +
-    '%)'
-  )
+  if (colors.length === 0) {
+    // Reset the colors if all have been used
+    colors = ['#C40C0C', '#FF6500', '#FF8A08', '#FFC100', '#0A6847', '#7ABA78', '#756AB6', '#FF5BAE', '#6C3428', '#00224D'];
+  }
+  var index = Math.floor(Math.random() * colors.length);
+  var color = colors[index];
+  // Remove the selected color from the array
+  colors.splice(index, 1);
+  return color;
 }
+
+
 // const foodItems = [
 //     { category: "Fruits", items: ["Apple", "Banana", "Orange"]},
 //     { category: "Vegetables", items: ["Carrot", "Broccoli", "Spinach"]},
@@ -34,6 +38,7 @@ const FoodList = ({ foodItems }) => {
   const [selectedItem, setSelectedItem] = useState(null)
   const [color, setColor] = useState(null)
   const [coloredCategories, setColoredCategories] = useState([])
+  const [totalItems, setTotalItems] = useState({})
   const inputRef = useRef(null)
 
   useEffect(() => {
@@ -48,7 +53,7 @@ const FoodList = ({ foodItems }) => {
   const FoodFlatList = () => {
     const renderItem = ({ item }) => (
       <View>
-        <Text style={[styles.category, { color: item.color }]}>
+        <Text style={[styles.category, {color: item.color, borderColor: item.color}]}>
           {item.category}
         </Text>
   
@@ -65,7 +70,11 @@ const FoodList = ({ foodItems }) => {
                     key={`${brand} ${subcategory}`}
                     onPress={() => {
                       setColor(item.color)
-                      setSelectedItem(`${brand} ${subcategory}`)
+                      if (brand != 'Soda'){
+                        setSelectedItem(`${subcategory} ${brand}`)
+                      } else if (brand == 'Soda'){
+                        setSelectedItem(`${subcategory}`)
+                      }
                       setModalVisible(true)
                       setTimeout(() => {
                         inputRef.current.focus()
@@ -203,7 +212,7 @@ const styles = StyleSheet.create({
     padding: 10,
     fontWeight: 'bold',
     paddingBottom: 2,
-    borderBottomWidth: 3,
+    borderBottomWidth: 2,
   },
 
   itemContainer: {

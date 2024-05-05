@@ -10,9 +10,9 @@ import { StyleSheet, Text, SafeAreaView } from 'react-native'
 // ]
 
 const foodItems = [
-  { category: 'Fruits', items: ['Apple', 'Banana', 'Orange']},
-  { category: 'Vegetables', items: ['Carrot', 'Broccoli', 'Spinach']},
-  { category: 'Beverages', items: [{'Gatorade': ['Red', 'Yellow', 'Orange', 'Blue']}, 'Fanta', 'Coke']},
+  { category: 'Food', items: ['Hot Dog', 'Sausage', {'Pretzel': ['Regular', 'Cheese']}, 'Churros']},
+  { category: 'Beverages', items: [{'Gatorade': ['Red', 'Lime', 'Orange', 'Blue']}, 
+  {'Soda':['Coke','Diet Coke', 'Sprite', 'Lemonade', 'Orange']}]},
   // Add more categories and items
 ]
 
