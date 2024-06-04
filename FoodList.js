@@ -229,6 +229,7 @@ const FoodList = ({ foodItems }) => {
         </View>
       </Modal>
     );
+
   };
 
   const ViewFormattedListButton = () => {
@@ -371,20 +372,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.5)'
   },
-  modalView: {
-    backgroundColor: 'white',
-
-    padding: 15,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5
-  },
   button: {
     disabled: true,
     borderRadius: 5,
@@ -473,7 +460,21 @@ const styles = StyleSheet.create({
   modalList: {
     minWidth: 125,
     maxHeight: 600, // Limit the height of the list
-    marginBottom: 10,
+  },
+  modalView: {
+    backgroundColor: 'white',
+    padding: 15,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2
+    },
+    marginBottom: 15,
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    borderRadius: 5
   },
   modalTitle: {
     textDecorationLine: 'underline',
