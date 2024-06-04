@@ -8,15 +8,17 @@ import {
   FlatList,
   Modal,
   StyleSheet,
-  TouchableOpacity
+  TouchableOpacity,
+  ScrollView,
+  Image
 } from 'react-native'
 
-var colors = ['#C40C0C', '#FF6500', '#FF8A08', '#FFC100', '#F6E9B2', '#0A6847', '#7ABA78', '#756AB6', '#FF5BAE', '#6C3428', '#00224D'];
+var colors = ['#C40C0C', '#FF6500', '#FF8A08', '#FFC100', '#00CC66', '#0A6847', '#7ABA78', '#756AB6', '#FF5BAE', '#6C3428', '#00224D'];
 
 function getColor() {
   if (colors.length === 0) {
     // Reset the colors if all have been used
-    colors = ['#C40C0C', '#FF6500', '#FF8A08', '#FFC100', '#0A6847', '#7ABA78', '#756AB6', '#FF5BAE', '#6C3428', '#00224D'];
+    colors = ['#C40C0C', '#FF6500', '#FF8A08', '#FFC100', '#00CC66', '#0A6847', '#7ABA78', '#756AB6', '#FF5BAE', '#6C3428', '#00224D'];
   }
   var index = Math.floor(Math.random() * colors.length);
   var color = colors[index];
@@ -38,7 +40,8 @@ const FoodList = ({ foodItems }) => {
   const [selectedItem, setSelectedItem] = useState(null)
   const [color, setColor] = useState(null)
   const [coloredCategories, setColoredCategories] = useState([])
-  const [totalItems, setTotalItems] = useState({})
+  const [selectedItems, setSelectedItems] = useState({}); // Store selected items and quantities
+  const [formattedList, setFormattedList] = useState(''); // Store the formatted list string
   const inputRef = useRef(null)
 
   useEffect(() => {
@@ -49,6 +52,8 @@ const FoodList = ({ foodItems }) => {
     }))
     setColoredCategories(coloredItems)
   }, [])
+
+
 
   const FoodFlatList = () => {
     const renderItem = ({ item }) => (
@@ -113,6 +118,7 @@ const FoodList = ({ foodItems }) => {
         data={coloredCategories}
         renderItem={renderItem}
         keyExtractor={(item) => item.category}
+        contentContainerStyle={styles.scrollContainer} // Apply padding to content
       />
     )
   }
@@ -131,7 +137,13 @@ const FoodList = ({ foodItems }) => {
       }
       console.log(`Selected ${quantity} of ${selectedItem}`)
       setModalVisible(false) // Close modal after confirmation
-    }
+
+      setSelectedItems((prevItems) => ({
+        ...prevItems,
+        [selectedItem]: parseInt(quantity), // Store quantity as a number
+      }));
+      setModalVisible(false); // Close modal after confirmation
+    };
 
     const handleCloseModal = () => {
       setModalVisible(false)
@@ -191,19 +203,138 @@ const FoodList = ({ foodItems }) => {
                 </TouchableOpacity>
               </View>
             </View>
-            
-        
         </Modal>
       </View>
     )
   }
 
+  const FormattedListModal = () => {
+    const handleCloseModal = () => {
+      setFormattedList(''); // Clear formattedList to close modal
+    };
+
+    return (
+      <Modal animationType="Slide" transparent={true} visible={formattedList !== ''}>
+        <View style={styles.centeredView}>
+          <TouchableOpacity style={styles.centeredView} activeOpacity={1} onPress={handleCloseModal} />
+          <View style={styles.modalView}>
+            <Text style={styles.modalTitle}>Today's List:</Text>
+            <ScrollView style={styles.modalList}>
+              <Text>{formattedList}</Text>
+            </ScrollView>
+            <TouchableOpacity onPress={handleCloseModal} style={styles.closeButton}>
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+  const ViewFormattedListButton = () => {
+    return (
+      <TouchableOpacity 
+        style={styles.floatingButton} 
+        onPress={formatFoodList} 
+        activeOpacity={0.7} 
+      >
+        <Image 
+          source={require('./assets/eye-icon.png')} 
+          style={styles.floatingButtonIcon} 
+        />
+      </TouchableOpacity>
+    );
+  };
+
+
+    // Function to format the selected items list
+    const formatFoodList = () => {
+      const formattedItems = {};
+    
+      for (const category of foodItems) {
+        for (const item of category.items) {
+          if (typeof item === 'object') {
+            const [brand, subcategories] = Object.entries(item)[0];
+    
+            formattedItems[brand] = formattedItems[brand] || {}; // No need for 'items' or 'packs'
+    
+            for (const subcategory of subcategories) {
+              const itemName = brand === 'Soda' ? subcategory : `${subcategory} ${brand}`;
+              const quantity = selectedItems[itemName] || 0;
+    
+              if (quantity > 0) {
+                if (quantity <= 3) {
+                  // Handle individual items (quantity <= 3)
+                  formattedItems[brand][subcategory] = quantity; 
+                } else {
+                  // Handle pack quantities (quantity > 3)
+                  let remainingQuantity = quantity;
+                  let packNumber = 1;
+    
+                  while (remainingQuantity > 0) {
+                    const packKey = `Pack ${packNumber}`;
+                    formattedItems[brand][packKey] = formattedItems[brand][packKey] || {};
+    
+                    // Calculate how much of this subcategory can fit in the current pack
+                    const currentPackTotal = Object.values(formattedItems[brand][packKey]).reduce((sum, q) => sum + q, 0);
+                    const availableSpace = 24 - currentPackTotal;
+                    const quantityToAdd = Math.min(remainingQuantity, availableSpace);
+    
+                    formattedItems[brand][packKey][subcategory] = 
+                      (formattedItems[brand][packKey][subcategory] || 0) + quantityToAdd;
+    
+                    remainingQuantity -= quantityToAdd;
+    
+                    // If the pack is full, move to the next pack
+                    if (availableSpace === quantityToAdd) {
+                      packNumber++;
+                    }
+                  }
+                }
+              }
+            }
+          } else {
+            // Logic for non-subcategory items (simply add to quantity)
+            const quantity = selectedItems[item] || 0;
+            if (quantity > 0) {
+              formattedItems[category.category] = formattedItems[category.category] || {};
+              formattedItems[category.category][item] = quantity;
+            }
+          }
+        }
+      }
+    
+      // Create the formatted string 
+      let formattedListString = '';
+    
+      for (const [brand, itemsData] of Object.entries(formattedItems)) {
+        if (Object.keys(itemsData).length > 0) {
+          formattedListString += `${brand}:\n`; 
+    
+          for (const [itemName, quantity] of Object.entries(itemsData)) {
+            if (itemName.startsWith('Pack')) {
+              const packItemsString = Object.entries(quantity).map(([subcat, qty]) => {
+                return `${subcat.charAt(0).toUpperCase()}-${qty}`;
+              }).join(', ');
+              formattedListString += `  ${itemName}: ${packItemsString}\n`;
+            } else {
+              formattedListString += `  ${itemName}: ${quantity}\n`;
+            }
+          }
+        }
+      }
+    
+      setFormattedList(formattedListString);
+    };
+
   return (
-    <View>
+    <View style={{ flex: 1 }}>
       <FoodFlatList />
       <QuantityModal />
+      <FormattedListModal />
+      <ViewFormattedListButton />
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -308,7 +439,6 @@ const styles = StyleSheet.create({
     paddingBottom: 3,
     fontWeight: 'bold',
     marginLeft: 10,
-    textDecorationLine: 'underline',
     
   },
   subItemContainer: {
@@ -324,6 +454,50 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     //shadow for android
     elevation: 3
+  },
+  scrollContainer: {
+    flexGrow: 1, // Allow ScrollView to take up available space
+  },
+  doneButton: {
+    backgroundColor: 'black',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  doneButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  // ... (Modal styles)
+  modalList: {
+    minWidth: 125,
+    maxHeight: 600, // Limit the height of the list
+    marginBottom: 10,
+  },
+  modalTitle: {
+    textDecorationLine: 'underline',
+  },
+  floatingButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30, 
+    backgroundColor: 'black', 
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 5, // For Android shadow
+    shadowColor: '#000', // For iOS shadow
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+  },
+  floatingButtonIcon: {
+    width: 25, 
+    height: 25,
+    tintColor: 'white', // Optional: Set icon color 
   },
 })
 

@@ -10,9 +10,23 @@ import { StyleSheet, Text, SafeAreaView } from 'react-native'
 // ]
 
 const foodItems = [
-  { category: 'Food', items: ['Hot Dog', 'Sausage', {'Pretzel': ['Regular', 'Cheese']}, 'Churros']},
-  { category: 'Beverages', items: [{'Gatorade': ['Red', 'Lime', 'Orange', 'Blue']}, 
-  {'Soda':['Coke','Diet Coke', 'Sprite', 'Lemonade', 'Orange']}]},
+  { category: 'Food', items: 
+  ['Hot Dog',
+  'Sausage',
+  {'Pretzel': ['Regular', 'Cheese']},
+  'Churros'
+  ]},
+  
+  { category: 'Beverages', items: 
+  [
+  {'Gatorade': ['Red', 'Lime', 'Orange', 'Blue']}, 
+  {'Soda':['Coke','Diet Coke', 'Sprite', 'Lemonade', 'Orange']},
+  'Red Bull',
+  'Seltzer Water',
+  {'Snapple':['Orange','Yellow','Diet']}
+  
+  ]},
+
   // Add more categories and items
 ]
 
