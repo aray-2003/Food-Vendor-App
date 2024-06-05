@@ -1,5 +1,9 @@
+I am making an app in react native for food vendors where they select the food items they need for the next day.
+
+my current code is:
+
 import React, { useState, useEffect, useRef } from 'react'
-import { Share } from 'react-native';
+import * as Animatable from 'react-native-animatable';
 
 import {
   View,
@@ -10,8 +14,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Image,
-  Alert
+  Image
 } from 'react-native'
 
 var colors = ['#C40C0C', '#FF6500', '#FF8A08', '#FFC100', '#00CC66', '#0A6847', '#7ABA78', '#756AB6', '#FF5BAE', '#6C3428', '#00224D'];
@@ -233,149 +236,6 @@ const FoodList = ({ foodItems }) => {
 
   };
 
-  // Function to clear the selected items list
-  const clearFoodList = () => {
-    Alert.alert( // Confirmation alert
-      'Clear List',
-      'Are you sure you want to clear the current food list?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Clear',
-          onPress: () => setSelectedItems({}), // Reset selectedItems
-        },
-      ]
-    );
-  };
-
-  
-  const ClearListButton = () => {
-    return (
-      <TouchableOpacity
-      style={[styles.floatingButton, styles.clearButton]}
-      onPress={clearFoodList}
-      activeOpacity={0.7}
-      >
-        <Image
-          source={require('./assets/delete-icon.png')} // Replace with your delete icon
-          style={styles.floatingButtonIcon}
-          />
-      </TouchableOpacity>
-    );
-    };
-    
-    const shareFoodList = async () => {
-      const formattedItems = {};
-
-      for (const category of foodItems) {
-        for (const item of category.items) {
-          if (typeof item === 'object') {
-            const [brand, subcategories] = Object.entries(item)[0];
-            formattedItems[brand] = formattedItems[brand] || {}; 
-
-            for (const subcategory of subcategories) {
-              const itemName = brand === 'Soda' ? subcategory : `${subcategory} ${brand}`;
-              const quantity = selectedItems[itemName] || 0;
-
-              if (quantity > 0) {
-                if (quantity <= 3) {
-                  formattedItems[brand][subcategory] = quantity; 
-                } else {
-                  let remainingQuantity = quantity;
-                  let packNumber = 1;
-
-                  while (remainingQuantity > 0) {
-                    const packKey = `Pack ${packNumber}`;
-                    formattedItems[brand][packKey] = formattedItems[brand][packKey] || {};
-
-                    const currentPackTotal = Object.values(formattedItems[brand][packKey]).reduce((sum, q) => sum + q, 0);
-                    const availableSpace = 24 - currentPackTotal;
-                    const quantityToAdd = Math.min(remainingQuantity, availableSpace);
-
-                    formattedItems[brand][packKey][subcategory] = 
-                      (formattedItems[brand][packKey][subcategory] || 0) + quantityToAdd;
-
-                    remainingQuantity -= quantityToAdd;
-
-                    if (availableSpace === quantityToAdd) {
-                      packNumber++;
-                    }
-                  }
-                }
-              }
-            }
-          } else {
-            const quantity = selectedItems[item] || 0;
-            if (quantity > 0) {
-              formattedItems[category.category] = formattedItems[category.category] || {};
-              formattedItems[category.category][item] = quantity;
-            }
-          }
-        }
-      }
-
-    // Create the formatted string array 
-    let formattedListArray = [];
-
-    for (const [brand, itemsData] of Object.entries(formattedItems)) {
-      if (Object.keys(itemsData).length > 0) {
-        formattedListArray.push(`${brand}:`); 
-
-        for (const [itemName, quantity] of Object.entries(itemsData)) {
-          if (itemName.startsWith('Pack')) {
-            const packItemsString = Object.entries(quantity).map(([subcat, qty]) => {
-              return `${subcat.charAt(0).toUpperCase()}-${qty}`;
-            }).join(', ');
-            formattedListArray.push(`  ${itemName}: ${packItemsString}`);
-          } else {
-            formattedListArray.push(`  ${itemName}: ${quantity}`);
-          }
-        }
-
-        formattedListArray.push(''); // Add a line break between brands
-      }
-    }
-      
-      try {
-        const result = await Share.share({
-          message: formattedListArray.join('\n')
-        });
-  
-        if (result.action === Share.sharedAction) {
-          if (result.activityType) {
-            // Shared with activity type of result.activityType
-            console.log("Shared with activity type:", result.activityType);
-          } else {
-            // Shared successfully
-            console.log("Shared successfully");
-          }
-        } else if (result.action === Share.dismissedAction) {
-          // Dismissed
-          console.log("Share dismissed");
-        }
-      } catch (error) {
-        Alert.alert('Error Sharing List', error.message);
-      }
-  };
-  
-  const ShareListButton = () => {
-    return (
-      <TouchableOpacity
-        style={[styles.floatingButton, styles.shareButton]}
-        onPress={shareFoodList}
-        activeOpacity={0.7}
-      >
-        <Image
-          source={require('./assets/share-icon.png')} // Replace with your share icon
-          style={styles.floatingButtonIcon}
-        />
-      </TouchableOpacity>
-    );
-  };
-    
   const ViewFormattedListButton = () => {
     return (
       <TouchableOpacity 
@@ -390,7 +250,6 @@ const FoodList = ({ foodItems }) => {
       </TouchableOpacity>
     );
   };
-
 
 
     // Function to format the selected items list
@@ -478,8 +337,6 @@ const FoodList = ({ foodItems }) => {
       <FoodFlatList />
       <QuantityModal />
       <FormattedListModal />
-      <ClearListButton />
-      <ShareListButton/>
       <ViewFormattedListButton />
     </View>
   );
@@ -628,12 +485,12 @@ const styles = StyleSheet.create({
   },
   floatingButton: {
     position: 'absolute',
-    marginTop: 50,
+    bottom: 20,
     right: 20,
     width: 60,
     height: 60,
     borderRadius: 30, 
-    backgroundColor: 'white', 
+    backgroundColor: 'black', 
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 5, // For Android shadow
@@ -645,14 +502,20 @@ const styles = StyleSheet.create({
   floatingButtonIcon: {
     width: 25, 
     height: 25,
-    tintColor: 'black', // Optional: Set icon color 
-  },
-  clearButton: {
-    bottom: 20, // Position it above the ViewFormattedListButton 
-  },
-  shareButton: {
-    bottom: 100, // Position in between the other two buttons
+    tintColor: 'white', // Optional: Set icon color 
   },
 })
 
 export default FoodList
+
+
+
+	
+-The formattedlistmodal should close when the area outside the modal is pressed similar to the quantitymodal
+-add a "New List" button next to the done button in the same style which clears the current foodlist
+-add a "New item" button which prompts a modal letting users input a new item in one of the categories. This new item should save even after app reload.
+
+[x] Revamp and Update the formatFoodList function to implement the following:
+	-when amounts between 1-3, inclusive, are selected, it should display the respective pack amount, for example a selection of 2 should display 2 packs instead of 2
+	-Also a pack is 24 items, so when ammounts within the category add up to 24 it should display "Pack: ((item_initial1)-(amount1), (item_initial2)-(amount2)...)" where item_initial represents the item name's initials and amount is the the respective number of that item making up the pack 
+	-whenever the confirm key is pressed, a new item from the subcategory can be selected so long as the sum isn't yet the 24
