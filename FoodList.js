@@ -402,45 +402,52 @@ const FoodList = ({ foodItems }) => {
           if (typeof item === 'object') {
             const [brand, subcategories] = Object.entries(item)[0];
     
-            formattedItems[brand] = formattedItems[brand] || {}; // No need for 'items' or 'packs'
+            formattedItems[brand] = formattedItems[brand] || {};
     
+            const quantitiesToPack = {};
             for (const subcategory of subcategories) {
               const itemName = brand === 'Soda' ? subcategory : `${subcategory} ${brand}`;
               const quantity = selectedItems[itemName] || 0;
     
               if (quantity > 0) {
                 if (quantity <= 3) {
-                  // Handle individual items (quantity <= 3)
-                  formattedItems[brand][subcategory] = quantity; 
+                  // Handle quantities 1-3 as individual items
+                  formattedItems[brand][subcategory] = quantity;
                 } else {
-                  // Handle pack quantities (quantity > 3)
-                  let remainingQuantity = quantity;
-                  let packNumber = 1;
-    
-                  while (remainingQuantity > 0) {
-                    const packKey = `Pack ${packNumber}`;
-                    formattedItems[brand][packKey] = formattedItems[brand][packKey] || {};
-    
-                    // Calculate how much of this subcategory can fit in the current pack
-                    const currentPackTotal = Object.values(formattedItems[brand][packKey]).reduce((sum, q) => sum + q, 0);
-                    const availableSpace = 24 - currentPackTotal;
-                    const quantityToAdd = Math.min(remainingQuantity, availableSpace);
-    
-                    formattedItems[brand][packKey][subcategory] = 
-                      (formattedItems[brand][packKey][subcategory] || 0) + quantityToAdd;
-    
-                    remainingQuantity -= quantityToAdd;
-    
-                    // If the pack is full, move to the next pack
-                    if (availableSpace === quantityToAdd) {
-                      packNumber++;
-                    }
-                  }
+                  // Quantities greater than 3 go into packing logic
+                  const initials = subcategory.split(' ').map(word => word.charAt(0).toUpperCase()).join('.');
+                  quantitiesToPack[initials] = quantity;
                 }
               }
             }
+    
+            // Pack the items
+            formattedItems[brand]['Pack'] = formattedItems[brand]['Pack'] || [];
+            let currentPackSpace = 24;
+            let currentPackContents = [];
+    
+            for (const [initials, quantity] of Object.entries(quantitiesToPack)) {
+              if (quantity <= currentPackSpace) {
+                currentPackContents.push(`${initials}-${quantity}`);
+                currentPackSpace -= quantity;
+              } else {
+                // Fill the current pack
+                const quantityToFit = currentPackSpace;
+                currentPackContents.push(`${initials}-${quantityToFit}`);
+                formattedItems[brand]['Pack'].push(currentPackContents.join(', '));
+    
+                // Start a new pack
+                currentPackContents = [`${initials}-${quantity - quantityToFit}`];
+                currentPackSpace = 24 - (quantity - quantityToFit);
+              }
+            }
+    
+            // Add the last pack if not empty
+            if (currentPackContents.length > 0) {
+              formattedItems[brand]['Pack'].push(currentPackContents.join(', '));
+            }
+    
           } else {
-            // Logic for non-subcategory items (simply add to quantity)
             const quantity = selectedItems[item] || 0;
             if (quantity > 0) {
               formattedItems[category.category] = formattedItems[category.category] || {};
@@ -450,27 +457,35 @@ const FoodList = ({ foodItems }) => {
         }
       }
     
-      // Create the formatted string 
-      let formattedListString = '';
-    
-      for (const [brand, itemsData] of Object.entries(formattedItems)) {
-        if (Object.keys(itemsData).length > 0) {
-          formattedListString += `${brand}:\n`; 
-    
-          for (const [itemName, quantity] of Object.entries(itemsData)) {
-            if (itemName.startsWith('Pack')) {
-              const packItemsString = Object.entries(quantity).map(([subcat, qty]) => {
-                return `${subcat.charAt(0).toUpperCase()}-${qty}`;
-              }).join(', ');
-              formattedListString += `  ${itemName}: ${packItemsString}\n`;
-            } else {
-              formattedListString += `  ${itemName}: ${quantity}\n`;
-            }
-          }
+       // Create the formatted string
+      // Create the formatted string
+  let formattedListString = '';
+
+  for (const [brand, itemsData] of Object.entries(formattedItems)) {
+    // Check if the brand/subcategory has any items (individual or in packs)
+    const hasItems = 
+      Object.keys(itemsData).some(key => key !== 'Pack' && itemsData[key] > 0) || 
+      (itemsData['Pack'] && itemsData['Pack'].length > 0);
+
+    // Only add the brand/subcategory if it has items 
+    if (hasItems) {
+      formattedListString += `${brand}:\n`;
+
+      for (const [itemName, quantity] of Object.entries(itemsData)) {
+        if (itemName !== 'Pack') {
+          formattedListString += `\t${itemName}: ${quantity}\n`; 
         }
       }
-    
-      setFormattedList(formattedListString);
+
+      if (itemsData['Pack'] && itemsData['Pack'].length > 0) {
+        for (const packContent of itemsData['Pack']) {
+          formattedListString += `\tPack: ${packContent}\n`;
+        }
+      }
+    }
+  }
+
+  setFormattedList(formattedListString);
     };
 
   return (
@@ -605,8 +620,7 @@ const styles = StyleSheet.create({
   },
   // ... (Modal styles)
   modalList: {
-    minWidth: 125,
-    maxHeight: 600, // Limit the height of the list
+    padding: 5,
   },
   modalView: {
     backgroundColor: 'white',
@@ -617,11 +631,9 @@ const styles = StyleSheet.create({
       width: 0,
       height: 2
     },
-    marginBottom: 15,
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
-    borderRadius: 5
   },
   modalTitle: {
     textDecorationLine: 'underline',
@@ -648,10 +660,10 @@ const styles = StyleSheet.create({
     tintColor: 'black', // Optional: Set icon color 
   },
   clearButton: {
-    bottom: 20, // Position it above the ViewFormattedListButton 
+    bottom: 100, // Position it above the ViewFormattedListButton 
   },
   shareButton: {
-    bottom: 100, // Position in between the other two buttons
+    bottom: 20, // Position in between the other two buttons
   },
 })
 
