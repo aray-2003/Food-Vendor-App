@@ -1,8 +1,9 @@
+import SearchBar from './SearchBar';
 import React, { useState, useEffect, useRef } from 'react'
-import { Share } from 'react-native';
 
 import {
   View,
+  Share,
   TextInput,
   Text,
   FlatList,
@@ -11,7 +12,8 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
-  Alert
+  Alert,
+  Animated
 } from 'react-native'
 
 var colors = ['#C40C0C', '#FF6500', '#FF8A08', '#FFC100', '#00CC66', '#0A6847', '#7ABA78', '#756AB6', '#FF5BAE', '#6C3428', '#00224D'];
@@ -40,10 +42,18 @@ const FoodList = ({ foodItems }) => {
   const [modalVisible, setModalVisible] = useState(false)
   const [selectedItem, setSelectedItem] = useState(null)
   const [color, setColor] = useState(null)
-  const [coloredCategories, setColoredCategories] = useState([])
   const [selectedItems, setSelectedItems] = useState({}); // Store selected items and quantities
-  const [formattedList, setFormattedList] = useState(''); // Store the formatted list string
+  const [formattedList, setFormattedList] = useState([]); // Store the formatted list string
+  const [filteredFoodItems, setFilteredFoodItems] = useState(foodItems);
+  const [showFormattedList, setShowFormattedList] = useState(false);
+  const [coloredCategories, setColoredCategories] = useState([]);
   const inputRef = useRef(null)
+  const [searchHistory, setSearchHistory] = useState([]);
+  const [isListDirty, setIsListDirty] = useState(true); 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedItemsHistory, setSelectedItemsHistory] = useState([]);
+
+  const bottomSheetOffset = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     // Generate pastel color for each category only once
@@ -51,85 +61,126 @@ const FoodList = ({ foodItems }) => {
       ...category,
       color: getColor()
     }))
-    setColoredCategories(coloredItems)
+    setFilteredFoodItems(coloredItems);
+    setColoredCategories(coloredItems);
   }, [])
 
+  useEffect(() => {
+    if (isListDirty) { 
+      formatFoodList();
+      setIsListDirty(false); // Reset the flag after updating
+    }
+  }, [selectedItems, isListDirty])
 
+  const handleSearchChange = (query) => {
+    setSearchQuery(query);
+
+    if (query.trim() === '') {
+      // Reset to the full list
+      setFilteredFoodItems([...coloredCategories]); 
+    } else {
+      // Filtering logic (unchanged)
+      const filteredItems = coloredCategories.map((category) => ({
+        ...category,
+        items: category.items.filter((item) => {
+          const itemName = typeof item === 'object'
+            ? Object.entries(item)[0][1].join(' ')
+            : item;
+          return itemName.toLowerCase().includes(query.toLowerCase());
+        }),
+      }));
+      setFilteredFoodItems(filteredItems);
+    }
+  };
+
+  const handleGoBackInSearch = () => {
+    setSearchHistory((prevHistory) => {
+      const newHistory = prevHistory.slice(0, -1);
+      const previousQuery = newHistory[newHistory.length - 1] || '';
+  
+      // Update searchQuery and apply the filter immediately 
+      setSearchQuery(previousQuery);
+      handleSearchChange(previousQuery);
+  
+      // Return the updated history
+      return newHistory;
+    });
+  };
 
   const FoodFlatList = () => {
     const renderItem = ({ item }) => (
       <View>
-        <Text style={[styles.category, {color: item.color, borderColor: item.color}]}>
+        <Text style={[styles.category, { color: item.color, borderColor: item.color }]}>
           {item.category}
         </Text>
-  
+
         {item.items.map((food) => {
           if (typeof food === 'object') {
-            const [brand, subcategories] = Object.entries(food)[0]
-  
+            const [brand, subcategories] = Object.entries(food)[0];
+
             return (
-              <View>
+              <View key={brand}> 
                 <Text style={[styles.brand, { color: item.color }]}>{brand}</Text>
                 {subcategories.map((subcategory) => (
                   <TouchableOpacity
                     style={[styles.subItemContainer, { backgroundColor: item.color }]}
                     key={`${brand} ${subcategory}`}
                     onPress={() => {
-                      setColor(item.color)
-                      if (brand != 'Soda'){
-                        setSelectedItem(`${subcategory} ${brand}`)
-                      } else if (brand == 'Soda'){
-                        setSelectedItem(`${subcategory}`)
-                      }
-                      setModalVisible(true)
-                      setTimeout(() => {
-                        inputRef.current.focus()
-                      }, 250)
+                      setSearchHistory([]);
+                      setColor(item.color);
+                      setSelectedItem(brand !== 'Soda' ? `${subcategory} ${brand}` : `${subcategory}`);
+                      setModalVisible(true);
                     }}
                   >
                     <Text style={styles.item}>{subcategory}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
-            )
+            );
           } else {
             return (
               <TouchableOpacity
                 style={[styles.itemContainer, { backgroundColor: item.color }]}
-                key={food}
+                key={food} 
                 onPress={() => {
-                  setColor(item.color)
-                  setSelectedItem(food)
-                  setModalVisible(true)
-                  setTimeout(() => {
-                    inputRef.current.focus()
-                  }, 250)
+                  setSearchHistory([]);
+                  setColor(item.color);
+                  setSelectedItem(food);
+                  setModalVisible(true);
                 }}
               >
                 <Text style={styles.item}>{food}</Text>
               </TouchableOpacity>
-            )
+            );
           }
         })}
       </View>
-    )
+    );
 
     return (
       <FlatList
-        data={coloredCategories}
+        data={filteredFoodItems}
         renderItem={renderItem}
         keyExtractor={(item) => item.category}
-        contentContainerStyle={styles.scrollContainer} // Apply padding to content
+        contentContainerStyle={styles.scrollContainer}
       />
-    )
-  }
+    );
+  };
 
   const QuantityModal = () => {
+    useEffect(() => {
+      // Show the keyboard when the modal becomes visible
+      if (modalVisible) {
+        setTimeout(() => { // Use setTimeout to ensure TextInput is rendered
+          inputRef.current.focus(); // This will automatically open the keyboard
+        }, 100); 
+      }
+    }, [modalVisible]);
+
     const [quantity, setQuantity] = useState('')
     const [isValidQuantity, setIsValidQuantity] = useState(false)
 
     const handleConfirm = () => {
-
       if (quantity === null || quantity <= 0 || isNaN(quantity) || quantity.includes('.') || quantity.includes(' ')) {
         setIsValidQuantity(false)
         return
@@ -137,13 +188,15 @@ const FoodList = ({ foodItems }) => {
         setIsValidQuantity(true)
       }
       console.log(`Selected ${quantity} of ${selectedItem}`)
+      
       setModalVisible(false) // Close modal after confirmation
 
       setSelectedItems((prevItems) => ({
         ...prevItems,
         [selectedItem]: parseInt(quantity), // Store quantity as a number
       }));
-      setModalVisible(false); // Close modal after confirmation
+      setSelectedItemsHistory((prevHistory) => [...prevHistory, { ...selectedItems }]);
+      setIsListDirty(true); 
     };
 
     const handleCloseModal = () => {
@@ -171,7 +224,10 @@ const FoodList = ({ foodItems }) => {
           <TouchableOpacity
             style={styles.centeredView}
             activeOpacity={1}
-            onPress={handleCloseModal}
+            onPress={() => {
+              handleConfirm(); // Call handleConfirm on button press
+              handleCloseModal(); // Close the modal after confirmation
+            }}
           />
           <View style={styles.modalView}>
               <Text style={[styles.modalText]}>
@@ -210,138 +266,49 @@ const FoodList = ({ foodItems }) => {
   }
 
   const FormattedListModal = () => {
-    const handleCloseModal = () => {
-      setFormattedList(''); // Clear formattedList to close modal
-    };
-
     return (
-      <Modal animationType="Slide" transparent={true} visible={formattedList !== ''}>
-        <View style={styles.centeredView}>
-          <TouchableOpacity style={styles.centeredView} activeOpacity={1} onPress={handleCloseModal} />
-          <View style={styles.modalView}>
+      <Animated.View
+        style={[
+          styles.bottomSheetContainer,
+          {
+            height: showFormattedList ? 'auto' : 60, // Partially visible height
+            opacity: showFormattedList ? 1 : 0.8, // Slightly transparent when hidden 
+          },
+        ]}
+      >
+        <View style={styles.modalView}>
+          <TouchableOpacity onPress={toggleBottomSheet}>
             <Text style={styles.modalTitle}>Today's List:</Text>
+          </TouchableOpacity>
+          {showFormattedList && ( // Conditionally render ScrollView
             <ScrollView style={styles.modalList}>
               <Text>{formattedList}</Text>
             </ScrollView>
-            <TouchableOpacity onPress={handleCloseModal} style={styles.closeButton}>
-              <Text style={styles.closeButtonText}>Close</Text>
-            </TouchableOpacity>
-          </View>
+          )}
         </View>
-      </Modal>
-    );
-
-  };
-
-  // Function to clear the selected items list
-  const clearFoodList = () => {
-    Alert.alert( // Confirmation alert
-      'Clear List',
-      'Are you sure you want to clear the current food list?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Clear',
-          onPress: () => setSelectedItems({}), // Reset selectedItems
-        },
-      ]
+      </Animated.View>
     );
   };
 
-  
-  const ClearListButton = () => {
-    return (
-      <TouchableOpacity
-      style={[styles.floatingButton, styles.clearButton]}
-      onPress={clearFoodList}
-      activeOpacity={0.7}
-      >
-        <Image
-          source={require('./assets/delete-icon.png')} // Replace with your delete icon
-          style={styles.floatingButtonIcon}
-          />
-      </TouchableOpacity>
-    );
-    };
+  const toggleBottomSheet = () => {
+    formatFoodList();
+    setShowFormattedList(!showFormattedList);
+  };
+
+  // Animation for the bottom sheet
+  useEffect(() => {
+    Animated.timing(bottomSheetOffset, {
+      toValue: showFormattedList ? -300 : 0, // Adjust -300 to your desired height
+      duration: 200,
+      useNativeDriver: false // Set to false as we are animating height
+    }).start();
+  }, [showFormattedList, bottomSheetOffset]); // Run when showFormattedList changes
+
     
-    const shareFoodList = async () => {
-      const formattedItems = {};
-
-      for (const category of foodItems) {
-        for (const item of category.items) {
-          if (typeof item === 'object') {
-            const [brand, subcategories] = Object.entries(item)[0];
-            formattedItems[brand] = formattedItems[brand] || {}; 
-
-            for (const subcategory of subcategories) {
-              const itemName = brand === 'Soda' ? subcategory : `${subcategory} ${brand}`;
-              const quantity = selectedItems[itemName] || 0;
-
-              if (quantity > 0) {
-                if (quantity <= 3) {
-                  formattedItems[brand][subcategory] = quantity; 
-                } else {
-                  let remainingQuantity = quantity;
-                  let packNumber = 1;
-
-                  while (remainingQuantity > 0) {
-                    const packKey = `Pack ${packNumber}`;
-                    formattedItems[brand][packKey] = formattedItems[brand][packKey] || {};
-
-                    const currentPackTotal = Object.values(formattedItems[brand][packKey]).reduce((sum, q) => sum + q, 0);
-                    const availableSpace = 24 - currentPackTotal;
-                    const quantityToAdd = Math.min(remainingQuantity, availableSpace);
-
-                    formattedItems[brand][packKey][subcategory] = 
-                      (formattedItems[brand][packKey][subcategory] || 0) + quantityToAdd;
-
-                    remainingQuantity -= quantityToAdd;
-
-                    if (availableSpace === quantityToAdd) {
-                      packNumber++;
-                    }
-                  }
-                }
-              }
-            }
-          } else {
-            const quantity = selectedItems[item] || 0;
-            if (quantity > 0) {
-              formattedItems[category.category] = formattedItems[category.category] || {};
-              formattedItems[category.category][item] = quantity;
-            }
-          }
-        }
-      }
-
-    // Create the formatted string array 
-    let formattedListArray = [];
-
-    for (const [brand, itemsData] of Object.entries(formattedItems)) {
-      if (Object.keys(itemsData).length > 0) {
-        formattedListArray.push(`${brand}:`); 
-
-        for (const [itemName, quantity] of Object.entries(itemsData)) {
-          if (itemName.startsWith('Pack')) {
-            const packItemsString = Object.entries(quantity).map(([subcat, qty]) => {
-              return `${subcat.charAt(0).toUpperCase()}-${qty}`;
-            }).join(', ');
-            formattedListArray.push(`  ${itemName}: ${packItemsString}`);
-          } else {
-            formattedListArray.push(`  ${itemName}: ${quantity}`);
-          }
-        }
-
-        formattedListArray.push(''); // Add a line break between brands
-      }
-    }
-      
+  const shareFoodList = async () => {
       try {
         const result = await Share.share({
-          message: formattedListArray.join('\n')
+          message: formattedList
         });
   
         if (result.action === Share.sharedAction) {
@@ -378,127 +345,170 @@ const FoodList = ({ foodItems }) => {
     
   const ViewFormattedListButton = () => {
     return (
-      <TouchableOpacity 
-        style={styles.floatingButton} 
-        onPress={formatFoodList} 
-        activeOpacity={0.7} 
+      <TouchableOpacity
+        style={[styles.floatingButton, styles.viewListButton]}
+        onPress={toggleBottomSheet} // Toggle bottom sheet on button press
+        activeOpacity={0.7}
       >
-        <Image 
-          source={require('./assets/eye-icon.png')} 
-          style={styles.floatingButtonIcon} 
+        <Image
+          source={require('./assets/eye-icon.png')}
+          style={styles.floatingButtonIcon}
         />
       </TouchableOpacity>
     );
   };
 
+  const UndoButton = () => {
+    return (
+      <TouchableOpacity
+        style={[styles.floatingButton, styles.undoButton]}
+        onPress={handleUndo}
+        activeOpacity={0.7}
+      >
+        <Image
+          source={require('./assets/undo-icon.png')} 
+          style={styles.undoButtonIcon}
+        />
+      </TouchableOpacity>
+    );
+  };
 
+  const handleUndo = () => {
+    if (Object.keys(selectedItems).length === 0) {
+      formattedList = []
+      // List is empty, show an alert or handle it as needed
+      Alert.alert('Food List is Empty', 'There are no items to undo.');
+      return; // Exit the function early
+    }
+    // Get the last added item from selectedItems
+    const lastSelectedItemKey = Object.keys(selectedItems)
+      .reduce((a, b) => (selectedItems[a] > selectedItems[b] ? a : b));
 
-    // Function to format the selected items list
-    const formatFoodList = () => {
-      const formattedItems = {};
-    
-      for (const category of foodItems) {
-        for (const item of category.items) {
-          if (typeof item === 'object') {
-            const [brand, subcategories] = Object.entries(item)[0];
-    
-            formattedItems[brand] = formattedItems[brand] || {};
-    
-            const quantitiesToPack = {};
+    if (lastSelectedItemKey) {
+      setSelectedItems((prevItems) => {
+        // Create a copy of prevItems without modifying the original object
+        const newItems = { ...prevItems }; 
+        delete newItems[lastSelectedItemKey];
+        return newItems;
+      });
+       // Update the formatted list
+      setIsListDirty(true);
+    }
+    formatFoodList()
+  };
+
+  const formatFoodList = () => {
+    const formattedItems = {};
+  
+    for (const category of foodItems) {
+      for (const item of category.items) {
+        if (typeof item === 'object') {
+          const [brand, subcategories] = Object.entries(item)[0];
+          formattedItems[brand] = formattedItems[brand] || {}; 
+  
+          if (category.category === 'Beverages') {
+            // ***CORRECTED PACKING LOGIC START***
+            let currentPack = {};
+            let packTotal = 0;
+  
+            for (const subcategory of subcategories) {
+              const itemName = brand === 'Soda' ? subcategory : `${subcategory} ${brand}`;
+              let quantity = selectedItems[itemName] || 0;
+  
+              // Only process if there's a quantity MORE THAN 3
+              if (quantity > 3) { 
+                while (quantity > 0) {
+                  const availableSpace = 24 - packTotal;
+                  const amountToAdd = Math.min(quantity, availableSpace);
+  
+                  if (amountToAdd > 0) {
+                    currentPack[subcategory[0].toUpperCase()] = (currentPack[subcategory[0].toUpperCase()] || 0) + amountToAdd;
+                    packTotal += amountToAdd;
+                    quantity -= amountToAdd;
+                  }
+  
+                  if (packTotal === 24) {
+                    formattedItems[brand]['Pack'] = formattedItems[brand]['Pack'] || []; 
+                    formattedItems[brand]['Pack'].push(currentPack);
+                    currentPack = {};
+                    packTotal = 0;
+                  }
+                }
+              } else if (quantity > 0) { // Handle quantities 1-3
+                formattedItems[brand][subcategory] = `${quantity}`; 
+              }
+            }
+  
+            if (Object.keys(currentPack).length > 0) {
+              formattedItems[brand]['Pack'] = formattedItems[brand]['Pack'] || [];
+              formattedItems[brand]['Pack'].push(currentPack);
+            }
+            // ***CORRECTED PACKING LOGIC END***
+  
+          } else { // For non-beverage categories
             for (const subcategory of subcategories) {
               const itemName = brand === 'Soda' ? subcategory : `${subcategory} ${brand}`;
               const quantity = selectedItems[itemName] || 0;
-    
+  
               if (quantity > 0) {
-                if (quantity <= 3) {
-                  // Handle quantities 1-3 as individual items
-                  formattedItems[brand][subcategory] = quantity;
-                } else {
-                  // Quantities greater than 3 go into packing logic
-                  const initials = subcategory.split(' ').map(word => word.charAt(0).toUpperCase()).join('.');
-                  quantitiesToPack[initials] = quantity;
-                }
+                formattedItems[brand][subcategory] = quantity;
               }
             }
-    
-            // Pack the items
-            formattedItems[brand]['Pack'] = formattedItems[brand]['Pack'] || [];
-            let currentPackSpace = 24;
-            let currentPackContents = [];
-    
-            for (const [initials, quantity] of Object.entries(quantitiesToPack)) {
-              if (quantity <= currentPackSpace) {
-                currentPackContents.push(`${initials}-${quantity}`);
-                currentPackSpace -= quantity;
-              } else {
-                // Fill the current pack
-                const quantityToFit = currentPackSpace;
-                currentPackContents.push(`${initials}-${quantityToFit}`);
-                formattedItems[brand]['Pack'].push(currentPackContents.join(', '));
-    
-                // Start a new pack
-                currentPackContents = [`${initials}-${quantity - quantityToFit}`];
-                currentPackSpace = 24 - (quantity - quantityToFit);
-              }
-            }
-    
-            // Add the last pack if not empty
-            if (currentPackContents.length > 0) {
-              formattedItems[brand]['Pack'].push(currentPackContents.join(', '));
-            }
-    
-          } else {
-            const quantity = selectedItems[item] || 0;
-            if (quantity > 0) {
-              formattedItems[category.category] = formattedItems[category.category] || {};
-              formattedItems[category.category][item] = quantity;
-            }
+          }
+  
+        } else { // For non-subcategory items
+          const quantity = selectedItems[item] || 0;
+          if (quantity > 0) {
+            formattedItems[category.category] = formattedItems[category.category] || {};
+            formattedItems[category.category][item] = quantity;
           }
         }
       }
-    
-       // Create the formatted string
-      // Create the formatted string
-  let formattedListString = '';
-
-  for (const [brand, itemsData] of Object.entries(formattedItems)) {
-    // Check if the brand/subcategory has any items (individual or in packs)
-    const hasItems = 
-      Object.keys(itemsData).some(key => key !== 'Pack' && itemsData[key] > 0) || 
-      (itemsData['Pack'] && itemsData['Pack'].length > 0);
-
-    // Only add the brand/subcategory if it has items 
-    if (hasItems) {
-      formattedListString += `${brand}:\n`;
-
-      for (const [itemName, quantity] of Object.entries(itemsData)) {
-        if (itemName !== 'Pack') {
-          formattedListString += `\t${itemName}: ${quantity}\n`; 
+    }
+  
+    // Format the output list
+    let formattedListArray = [];
+  
+    for (const [brand, itemsData] of Object.entries(formattedItems)) {
+      if (Object.keys(itemsData).length > 0) {
+        formattedListArray.push(`${brand}:\n`);
+  
+        for (const itemKey in itemsData) {
+          if (itemKey === 'Pack') {
+            itemsData['Pack'].forEach((packContent, index) => {
+              const formattedPackItems = Object.entries(packContent)
+                .map(([initial, qty]) => `${initial}-${qty}`)
+                .join(', ');
+              formattedListArray.push(`\tPack: (${formattedPackItems})\n`);
+            });
+          } else {
+            formattedListArray.push(`\t${itemKey}: ${itemsData[itemKey]}\n`);
+          }
         }
-      }
-
-      if (itemsData['Pack'] && itemsData['Pack'].length > 0) {
-        for (const packContent of itemsData['Pack']) {
-          formattedListString += `\tPack: ${packContent}\n`;
-        }
+  
+        formattedListArray.push(''); 
       }
     }
-  }
-
-  setFormattedList(formattedListString);
-    };
+  
+    setFormattedList(formattedListArray.join(''));
+  };
+  
 
   return (
     <View style={{ flex: 1 }}>
+      <SearchBar onSearchChange={handleSearchChange} onGoBackInSearch={handleGoBackInSearch} /> 
       <FoodFlatList />
       <QuantityModal />
       <FormattedListModal />
-      <ClearListButton />
-      <ShareListButton/>
-      <ViewFormattedListButton />
+        <UndoButton /> 
+        <ShareListButton />
     </View>
   );
 }
+
+
+
+
 
 const styles = StyleSheet.create({
   category: {
@@ -621,6 +631,8 @@ const styles = StyleSheet.create({
   // ... (Modal styles)
   modalList: {
     padding: 5,
+    minWidth: 150,
+    maxHeight: 300,
   },
   modalView: {
     backgroundColor: 'white',
@@ -637,6 +649,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     textDecorationLine: 'underline',
+    fontSize: 16,
   },
   floatingButton: {
     position: 'absolute',
@@ -659,11 +672,38 @@ const styles = StyleSheet.create({
     height: 25,
     tintColor: 'black', // Optional: Set icon color 
   },
-  clearButton: {
-    bottom: 100, // Position it above the ViewFormattedListButton 
+
+  undoButtonIcon: {
+    width: 25,
+    height: 25,
+    tintColor: 'black'
+  },
+
+  undoButton: {
+    bottom: 140,
   },
   shareButton: {
-    bottom: 20, // Position in between the other two buttons
+    bottom: 65, // Position in between the other two buttons
+  },
+  bottomSheetTrigger: {
+    height: 100,
+    width: 100,
+  },
+  bottomSheetContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    overflow: 'hidden',
   },
 })
 
