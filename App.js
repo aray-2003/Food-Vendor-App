@@ -10,22 +10,88 @@ import { StyleSheet, Text, SafeAreaView } from 'react-native'
 // ]
 
 const foodItems = [
-  { category: 'Food', items: 
-  ['Hot Dog',
-  'Sausage',
-  {'Pretzel': ['Regular', 'Cheese']},
-  'Churros'
-  ]},
-  
-  { category: 'Beverages', items: 
-  [
-  {'Gatorade': ['Red', 'Lime', 'Orange', 'Blue']}, 
-  {'Soda':['Coke','Diet Coke', 'Sprite', 'Lemonade', 'Orange']},
-  'Red Bull',
-  'Seltzer Water',
-  {'Snapple':['Orange','Yellow','Diet']}
-  
-  ]},
+  {
+    category: 'Food',
+    items: 
+    [
+      'Hot Dog',
+      'Sausage',
+      'Bread',
+        { 'Pretzel': ['Regular', 'Cheese'] },
+      'Churros',
+    ]
+  },
+  {
+    category: 'Beverages',
+    items: 
+    [
+      {'Gatorade': ['Red', 'Lime', 'Orange', 'Blue']}, 
+      {'Soda':['Coke','Diet Coke', 'Sprite', 'Lemonade', 'Fanta','Pepsi', 'Coke Zero', 'Diet Pepsi']},
+      'Red Bull',
+      'Sparkling Water',
+        'Water',
+        'Small Water',
+        'Vitamin Water',
+      {'Snapple':['Peach','Lemon','Kiwi', 'Diet Peach','Diet Lemon']}
+    ]
+  },
+  {
+    category: 'Ice Cream',
+    items: 
+    [
+      'Oreo Bar',
+      'Klondike',
+        'Strawberry Shortcake',
+        'Vanilla Bar',
+        'Giant Sandwich',
+        'Cookie Sandwich',
+        'Choc Éclair',
+        'King Kone',
+        'Birthday Cake',
+        'Original',
+        { 'Magnum': ['2x Choc', 'Almond', 'Caramel', 'Peanut B.'] },
+        'Häagen-Dazs',
+    ]
+  },
+  {
+    category: 'Frozen Ice Cream',
+    items: 
+    [
+        'Spiderman',
+        'Spongebob',
+        'Spacejam',
+        'Sonic',
+        'Snowcone',
+        {'Minute Maid': ['Lemon','Strawberry']}
+    ]
+  },
+  {
+    category: 'Nuts',
+    items: 
+    [
+      'Peanuts',
+        'Cashews',
+        'Almonds',
+        'Pecans'
+    ]
+  },
+  {
+    category: 'Miscellaneous',
+    items: 
+      [
+      {'Food': ['Onions','Sauerkraut','Mustard','Ketchup']},
+        'Sterno',
+        'Napkins',
+        'Roll Towels',
+        'Gloves',
+        'Straws',
+        'Foil',
+        'Spoons',
+        'Sugar',
+        'Vanillin',
+        {'Bags': ['Garbage Bags','White Bags','Brown Bags','Black Bags']}      
+    ]
+  },
 
   // Add more categories and items
 ]
