@@ -1,5 +1,8 @@
 import SearchBar from './SearchBar';
 import React, { useState, useEffect, useRef } from 'react'
+import { Dropdown } from 'react-native-element-dropdown';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import firestore from '@react-native-firebase/firestore';
 
 import {
   View,
@@ -13,7 +16,8 @@ import {
   ScrollView,
   Image,
   Alert,
-  Animated
+  Animated,
+  TouchableWithoutFeedback
 } from 'react-native'
 
 var colors = ['#C40C0C', '#FF6500', '#FF8A08', '#FFC100', '#00CC66', '#0A6847', '#7ABA78', '#756AB6', '#FF5BAE', '#6C3428', '#00224D'];
@@ -37,14 +41,13 @@ function getColor() {
 //     // Add more categories and items
 // ];
 
-const FoodList = ({ foodItems }) => {
+const FoodList = ({ filteredFoodItems, setFilteredFoodItems, onAddItem }) => {
   //react variables
   const [modalVisible, setModalVisible] = useState(false)
   const [selectedItem, setSelectedItem] = useState(null)
   const [color, setColor] = useState(null)
   const [selectedItems, setSelectedItems] = useState({}); // Store selected items and quantities
   const [formattedList, setFormattedList] = useState([]); // Store the formatted list string
-  const [filteredFoodItems, setFilteredFoodItems] = useState(foodItems);
   const [showFormattedList, setShowFormattedList] = useState(false);
   const [coloredCategories, setColoredCategories] = useState([]);
   const inputRef = useRef(null)
@@ -52,18 +55,138 @@ const FoodList = ({ foodItems }) => {
   const [isListDirty, setIsListDirty] = useState(true); 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItemsHistory, setSelectedItemsHistory] = useState([]);
-
+  const [selectedCategory, setSelectedCategory] = useState(null); // Start with null
+  const [newItemInput, setNewItemInput] = useState('');
+  const [isModalVisible, setIsModalVisible] = useState(false);
   const bottomSheetOffset = useRef(new Animated.Value(0)).current;
+  const buttonOpacity = useRef(new Animated.Value(1)).current;
+  const scrollTimer = useRef(null);
+  const [updateTrigger, setUpdateTrigger] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  const [editedItemName, setEditedItemName] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+
 
   useEffect(() => {
-    // Generate pastel color for each category only once
-    const coloredItems = foodItems.map((category) => ({
-      ...category,
-      color: getColor()
-    }))
-    setFilteredFoodItems(coloredItems);
-    setColoredCategories(coloredItems);
-  }, [])
+    const loadFoodItems = async () => {
+      try {
+        const storedItems = await AsyncStorage.getItem('foodItems');
+        if (storedItems && JSON.parse(storedItems).length > 0) {
+          setFilteredFoodItems(JSON.parse(storedItems));
+        } else {
+          // If no stored items, initialize with your default data
+          setFilteredFoodItems([ 
+            {
+      category: 'Food',
+      items: 
+      [
+        'Hot Dog',
+        'Sausage',
+        'Bread',
+          { 'Pretzel': ['Regular', 'Cheese'] },
+        'Churros',
+      ]
+    },
+    {
+      category: 'Beverages',
+      items: 
+      [
+        'Water',
+        'Small Water',
+        {'Gatorade': ['Red', 'Lime', 'Orange', 'Blue']}, 
+        {'Soda':['Coke','Diet Coke', 'Sprite', 'Lemonade', 'Fanta','Pepsi', 'Coke Zero', 'Diet Pepsi']},
+        {'Snapple':['Peach','Lemon','Kiwi', 'Diet Peach','Diet Lemon']},
+        'Red Bull',
+        'Sparkling Water',
+          'Vitamin Water',
+      ]
+    },
+    {
+      category: 'Ice Cream',
+      items: 
+      [
+        'Oreo Bar',
+        'Klondike',
+          'Strawberry Shortcake',
+          'Vanilla Bar',
+          'Giant Sandwich',
+          'Cookie Sandwich',
+          'Choc Éclair',
+          'King Kone',
+          'Birthday Cake',
+          'Original',
+          { 'Magnum': ['2x Choc', 'Almond', 'Caramel', 'Peanut B.'] },
+          'Häagen-Dazs',
+      ]
+    },
+    {
+      category: 'Frozen Ice Cream',
+      items: 
+      [
+          'Spiderman',
+          'Spongebob',
+          'Spacejam',
+          'Sonic',
+          'Snowcone',
+          {'Minute Maid': ['Lemon','Strawberry']}
+      ]
+    },
+    {
+      category: 'Nuts',
+      items: 
+      [
+        'Peanuts',
+          'Cashews',
+          'Almonds',
+          'Pecans'
+      ]
+    },
+    {
+      category: 'Miscellaneous',
+      items: 
+        [
+        {'Food': ['Onions','Sauerkraut','Mustard','Ketchup']},
+          'Sterno',
+          'Napkins',
+          'Roll Towels',
+          'Gloves',
+          'Straws',
+          'Foil',
+          'Spoons',
+          'Sugar',
+          'Vanillin',
+          {'Bags': ['Garbage Bags','White Bags','Brown Bags','Black Bags']}      
+      ]
+    },
+          ]);
+        }
+        const coloredItems = filteredFoodItems.map((category) => ({
+          ...category,
+          color: getColor()
+        }))
+        setFilteredFoodItems(coloredItems);
+        setColoredCategories(coloredItems);
+      } catch (error) {
+        console.error("Error loading food items:", error);
+      }
+    };
+    loadFoodItems();
+  }, []);
+
+  useEffect(() => {
+    const saveFoodItems = async () => {
+      try {
+        await AsyncStorage.setItem('foodItems', JSON.stringify(filteredFoodItems));
+      } catch (error) {
+        console.error("Error saving food items:", error);
+      }
+    };
+
+    saveFoodItems(); 
+  }, [filteredFoodItems]);
+  
+
 
   useEffect(() => {
     if (isListDirty) { 
@@ -71,6 +194,200 @@ const FoodList = ({ foodItems }) => {
       setIsListDirty(false); // Reset the flag after updating
     }
   }, [selectedItems, isListDirty])
+
+  const fadeOutButtons = () => {
+    Animated.timing(buttonOpacity, {
+      toValue: 0,
+      duration: 275, // Adjust fade-out duration
+      useNativeDriver: true,
+    }).start();
+  };
+
+  // Function to fade in the buttons
+  const fadeInButtons = () => {
+    Animated.timing(buttonOpacity, {
+      toValue: 1,
+      duration: 275,  // Adjust fade-in duration
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleScroll = (event) => {
+    // Clear any existing timer to prevent immediate fade-in 
+    clearTimeout(scrollTimer.current); 
+
+    // Fade out buttons immediately on scroll
+    fadeOutButtons();
+
+    // Set a timer to fade buttons back in after a delay
+    scrollTimer.current = setTimeout(() => {
+      fadeInButtons();
+    }, 500); // Adjust delay (in ms) before fade-in 
+  };
+
+  const handleLongPressItem = (item) => {
+    setEditingItem(item);
+    setEditedItemName(typeof item === 'object' ? Object.keys(item)[0] : item);
+    setEditModalVisible(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (editedItemName.trim() !== '') {
+      const updatedFoodItems = filteredFoodItems.map((category) => {
+        return {
+          ...category,
+          items: category.items.map((foodItem) => {
+            if (
+              (typeof foodItem === 'string' && foodItem === editingItem) ||
+              (typeof foodItem === 'object' &&
+                Object.keys(foodItem)[0] === Object.keys(editingItem)[0])
+            ) {
+              // Update the item name if it's a string or an object
+              return typeof foodItem === 'string'
+                ? editedItemName
+                : { [editedItemName]: Object.values(foodItem)[0] }; 
+            }
+            return foodItem;
+          }),
+        };
+      });
+      setFilteredFoodItems(updatedFoodItems);
+      setEditingItem(null);
+      setEditedItemName('');
+      setEditModalVisible(false);
+    }
+  };
+
+  const handleDeleteItem = () => {
+    const updatedFoodItems = filteredFoodItems.map((category) => {
+      return {
+        ...category,
+        items: category.items.filter((foodItem) => {
+          return (
+            (typeof foodItem === 'string' && foodItem !== editingItem) ||
+            (typeof foodItem === 'object' &&
+              Object.keys(foodItem)[0] !== Object.keys(editingItem)[0])
+          );
+        }),
+      };
+    });
+    setFilteredFoodItems(updatedFoodItems);
+    setEditingItem(null);
+    setEditModalVisible(false);
+  };
+
+  const EditModal = () => {
+    return (
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={editModalVisible}
+
+      >
+        <TouchableWithoutFeedback
+          onPress={() => setEditModalVisible(false)}
+        >
+        <View style={styles.centeredView}>
+          <View style={styles.modalView}>
+            <Text style={styles.modalText}>Edit Item</Text>
+            <TextInput
+              style={styles.EditInput}
+              value={editedItemName}
+                onChangeText={setEditedItemName}
+                autoFocus={true}
+            />
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: 'green' }]} 
+                onPress={handleSaveEdit}
+              >
+                <Text style={styles.textStyle}>Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: 'red' }]} // Red button for delete
+                onPress={handleDeleteItem}
+              >
+                <Text style={styles.textStyle}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+    );
+  };
+  
+
+  const AddModal = () => {
+    const [selectedCategory, setSelectedCategory] = useState(null);
+    const [newItemInput, setNewItemInput] = useState('');
+
+    const hideAddModal = () => {
+      setIsModalVisible(false);
+    };
+
+    useEffect(() => {
+      if (filteredFoodItems && filteredFoodItems.length > 0) {
+        setSelectedCategory(filteredFoodItems[0].category);
+      }
+    }, [filteredFoodItems]);
+  
+    const handleAddItem = () => {
+      if (newItemInput.trim() !== '') {
+        onAddItem(selectedCategory, newItemInput); 
+        setNewItemInput('');
+        setIsModalVisible(false); 
+      }
+    };
+
+    return (
+      <View style={{ flex: 1 }}>
+        <Modal
+          visible={isModalVisible}
+          animationType="fade"
+          transparent={true}
+        >
+            <TouchableWithoutFeedback onPress={() => setIsModalVisible(false)}>
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                <Dropdown
+                  data={filteredFoodItems.map(item => ({ label: item.category, value: item.category }))}
+                  labelField="label"
+                  valueField="value"
+                  placeholder="Select category"
+                  value={selectedCategory}
+                  onChange={item => setSelectedCategory(item.value)}
+                  style={styles.dropdown} 
+                />
+                <TextInput
+                  style={styles.AddInput}
+                  placeholder="Enter new item"
+                  value={newItemInput}
+                  onChangeText={setNewItemInput}
+                />
+                <TouchableOpacity style={styles.AddButton} onPress={handleAddItem}> 
+                  <Text style={styles.textStyle}>Add Item</Text>
+                </TouchableOpacity>
+              </View>    
+            </View>
+            </TouchableWithoutFeedback>
+      </Modal>
+      </View>
+    ); 
+  };
+
+  const AddButton = () => {
+    return (
+      <TouchableOpacity 
+        style={[styles.floatingButton, styles.addButton]} 
+        onPress={() => {
+         setIsModalVisible(true)
+        }}
+      >
+        <Image source={require('./assets/add-icon.png')} style={styles.addButtonIcon} />
+      </TouchableOpacity>
+    );
+  };
 
   const handleSearchChange = (query) => {
     setSearchQuery(query);
@@ -107,7 +424,7 @@ const FoodList = ({ foodItems }) => {
     });
   };
 
-  const FoodFlatList = () => {
+  const FoodFlatList = ({onScroll}) => {
     const renderItem = ({ item }) => (
       <View>
         <Text style={[styles.category, { color: item.color, borderColor: item.color }]}>
@@ -131,6 +448,7 @@ const FoodList = ({ foodItems }) => {
                       setSelectedItem(brand !== 'Soda' ? `${subcategory} ${brand}` : `${subcategory}`);
                       setModalVisible(true);
                     }}
+                    onLongPress={() => handleLongPressItem(food)}
                   >
                     <Text style={styles.item}>{subcategory}</Text>
                   </TouchableOpacity>
@@ -148,6 +466,7 @@ const FoodList = ({ foodItems }) => {
                   setSelectedItem(food);
                   setModalVisible(true);
                 }}
+                onLongPress={() => handleLongPressItem(food)}
               >
                 <Text style={styles.item}>{food}</Text>
               </TouchableOpacity>
@@ -163,6 +482,7 @@ const FoodList = ({ foodItems }) => {
         renderItem={renderItem}
         keyExtractor={(item) => item.category}
         contentContainerStyle={styles.scrollContainer}
+        onScroll={onScroll}
       />
     );
   };
@@ -196,6 +516,7 @@ const FoodList = ({ foodItems }) => {
         [selectedItem]: parseInt(quantity), // Store quantity as a number
       }));
       setSelectedItemsHistory((prevHistory) => [...prevHistory, { ...selectedItems }]);
+      setUpdateTrigger(!updateTrigger); 
       setIsListDirty(true); 
     };
 
@@ -272,14 +593,14 @@ const FoodList = ({ foodItems }) => {
           styles.bottomSheetContainer,
           {
             height: showFormattedList ? 'auto' : 60, // Partially visible height
-            opacity: showFormattedList ? 1 : 0.8, // Slightly transparent when hidden 
+            opacity: showFormattedList ? 1 : 1, // Slightly transparent when hidden 
           },
         ]}
       >
         <View style={styles.modalView}>
-          <TouchableOpacity onPress={toggleBottomSheet}>
+          <TouchableOpacity onPress={toggleBottomSheet} style={styles.modalButton}>
             <Text style={styles.modalTitle}>Today's List:</Text>
-          </TouchableOpacity>
+            </TouchableOpacity>
           {showFormattedList && ( // Conditionally render ScrollView
             <ScrollView style={styles.modalList}>
               <Text>{formattedList}</Text>
@@ -298,11 +619,11 @@ const FoodList = ({ foodItems }) => {
   // Animation for the bottom sheet
   useEffect(() => {
     Animated.timing(bottomSheetOffset, {
-      toValue: showFormattedList ? -300 : 0, // Adjust -300 to your desired height
+      toValue: showFormattedList ? -300 : 0, 
       duration: 200,
-      useNativeDriver: false // Set to false as we are animating height
+      useNativeDriver: false, 
     }).start();
-  }, [showFormattedList, bottomSheetOffset]); // Run when showFormattedList changes
+  }, [showFormattedList, bottomSheetOffset]); 
 
     
   const shareFoodList = async () => {
@@ -310,6 +631,8 @@ const FoodList = ({ foodItems }) => {
         const result = await Share.share({
           message: formattedList
         });
+        setFormattedList([])
+        
   
         if (result.action === Share.sharedAction) {
           if (result.activityType) {
@@ -324,7 +647,7 @@ const FoodList = ({ foodItems }) => {
           console.log("Share dismissed");
         }
       } catch (error) {
-        Alert.alert('Error Sharing List', error.message);
+        Alert.alert('Empty Food List', 'Add food items before sharing.');
       }
   };
   
@@ -375,9 +698,9 @@ const FoodList = ({ foodItems }) => {
 
   const handleUndo = () => {
     if (Object.keys(selectedItems).length === 0) {
-      formattedList = []
+      setFormattedList([])
       // List is empty, show an alert or handle it as needed
-      Alert.alert('Food List is Empty', 'There are no items to undo.');
+      Alert.alert('Empty Food List', 'There are no items to undo.');
       return; // Exit the function early
     }
     // Get the last added item from selectedItems
@@ -400,7 +723,7 @@ const FoodList = ({ foodItems }) => {
   const formatFoodList = () => {
     const formattedItems = {};
   
-    for (const category of foodItems) {
+    for (const category of filteredFoodItems) {
       for (const item of category.items) {
         if (typeof item === 'object') {
           const [brand, subcategories] = Object.entries(item)[0];
@@ -497,11 +820,20 @@ const FoodList = ({ foodItems }) => {
   return (
     <View style={{ flex: 1 }}>
       <SearchBar onSearchChange={handleSearchChange} onGoBackInSearch={handleGoBackInSearch} /> 
-      <FoodFlatList />
+      <FoodFlatList onScroll={handleScroll} />
       <QuantityModal />
       <FormattedListModal />
+      <AddModal />
+      <Animated.View style={[
+        styles.floatingButtonContainer,
+        { opacity: buttonOpacity }
+      ]
+}> 
+        <EditModal />
+        <AddButton />
         <UndoButton /> 
         <ShareListButton />
+      </Animated.View>
     </View>
   );
 }
@@ -650,6 +982,29 @@ const styles = StyleSheet.create({
   modalTitle: {
     textDecorationLine: 'underline',
     fontSize: 16,
+    color: '#0098FF'
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.3)', 
+  },
+  AddInput: {
+    paddingVertical: 7,
+    paddingHorizontal: 2,
+  },
+  AddButton: {
+    backgroundColor: '#0098FF',
+    borderRadius: 7,
+    padding: 7,
+  },
+  modalContent: { // Style for the inner content area
+    backgroundColor: 'white',
+    minWidth: 250,
+    padding: 20,
+    borderRadius: 10, 
+    elevation: 5, 
   },
   floatingButton: {
     position: 'absolute',
@@ -670,13 +1025,13 @@ const styles = StyleSheet.create({
   floatingButtonIcon: {
     width: 25, 
     height: 25,
-    tintColor: 'black', // Optional: Set icon color 
+    tintColor: '#0098FF', // Optional: Set icon color 
   },
 
   undoButtonIcon: {
     width: 25,
     height: 25,
-    tintColor: 'black'
+    tintColor: '#0098FF'
   },
 
   undoButton: {
@@ -684,6 +1039,14 @@ const styles = StyleSheet.create({
   },
   shareButton: {
     bottom: 65, // Position in between the other two buttons
+  },
+  addButtonIcon: {
+    width: 25,
+    height: 25,
+    tintColor: '#0098FF'
+  },
+  addButton: {
+    bottom: 220,
   },
   bottomSheetTrigger: {
     height: 100,
